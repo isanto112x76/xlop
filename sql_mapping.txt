@@ -1,0 +1,9 @@
+MAPPING:
+
+    bl_orders_info -> orders i order_items
+    
+    bl_orders_info.products przyjmuje json np.
+
+        [
+            {"id":"1","count":"1","base_price":"24.9","retail_price":"40","bs_variant_id":"324930","order_source_id":"5450","order_id":"6939561"}
+        ]

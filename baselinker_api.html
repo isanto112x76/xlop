@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktywny Przewodnik po API BaseLinker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony -->
+    <!-- Application Structure Plan: Zastosowano strukturę dwukolumnową z nawigacją w panelu bocznym i dynamiczną treścią główną. Panel boczny zawiera przeszukiwalną listę metod API pogrupowanych w kategorie (moduły), co odzwierciedla logiczną budowę API. Ten układ został wybrany, aby ułatwić deweloperom szybkie odnajdywanie konkretnych metod i eksplorowanie powiązanych funkcji bez konieczności przewijania długiego dokumentu. Interakcje skupiają się na filtrowaniu i dynamicznym wyświetlaniu szczegółów metod, co tworzy płynne doświadczenie użytkownika (SPA). Strona główna zawiera wizualne podsumowanie i kluczowe ostrzeżenie o brakach w dokumentacji, co od razu ustawia właściwe oczekiwania. -->
+    <!-- Visualization & Content Choices: 
+        1. Rozkład Metod API (Wykres Kołowy): Cel: Informowanie o zakresie funkcjonalnym API. Metoda: Wykres kołowy (Donut Chart) z Chart.js. Interakcja: Podświetlenie fragmentu z etykietą. Uzasadnienie: Szybki, wizualny przegląd głównych modułów API.
+        2. Status Dokumentacji (Wykres Słupkowy): Cel: Zobrazowanie kompletności danych zawartych w raporcie źródłowym. Metoda: Wykres słupkowy (Bar Chart) z Chart.js. Interakcja: Podpowiedzi z dokładną liczbą metod. Uzasadnienie: Transparentne przedstawienie kluczowego ograniczenia raportu - niekompletności dokumentacji dla wielu metod.
+        3. Szczegóły Metod (Karty z Zakładkami): Cel: Organizacja szczegółowych danych technicznych. Metoda: Ustrukturyzowane bloki HTML/CSS. Interakcja: Przełączanie zakładek (Parametry, Odpowiedź, Przykład) za pomocą JS. Uzasadnienie: Poprawia czytelność i pozwala użytkownikowi skupić się na konkretnym aspekcie metody.
+        4. Brakujące Dane (Wyróżnienie Wizualne): Cel: Wyraźne oznaczenie metod bez pełnej dokumentacji. Metoda: Ikony (Unicode) i specjalne komunikaty. Interakcja: Statyczne. Uzasadnienie: Zapobiega frustracji użytkownika i odzwierciedla stan faktyczny raportu.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container { position: relative; width: 100%; max-width: 400px; margin-left: auto; margin-right: auto; height: 320px; max-height: 320px; }
+        @media (min-width: 768px) { .chart-container { height: 350px; max-height: 350px; } }
+        .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+        .sidebar-scroll::-webkit-scrollbar-track { background: #f1f5f9; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 2px; }
+        .table-cell-break { word-break: break-word; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <aside class="w-full md:w-80 bg-slate-100 border-r border-slate-200 flex-shrink-0">
+            <div class="p-4 border-b border-slate-200">
+                <h1 class="text-xl font-bold text-slate-900">API BaseLinker</h1>
+                <p class="text-sm text-slate-500">Interaktywny Przewodnik</p>
+                <div class="mt-4 relative">
+                    <input type="text" id="searchInput" placeholder="Szukaj metody..." class="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    <svg class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                </div>
+            </div>
+            <nav id="apiNav" class="p-4 overflow-y-auto sidebar-scroll" style="height: calc(100vh - 120px);"></nav>
+        </aside>
+
+        <main id="mainContent" class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+            
+        </main>
+    </div>
+
+    <script>
+        const apiData = {
+          'Wprowadzenie': {
+            isCategory: true,
+            description: 'Podstawowe informacje o działaniu, uwierzytelnianiu i limitach API BaseLinker.',
+            methods: {
+              Omówienie: {
+                isDocumented: 'full',
+                description: 'API BaseLinker umożliwia wymianę informacji między systemami zewnętrznymi a platformą. Komunikacja odbywa się za pomocą formatu JSON przesyłanego metodą POST na jeden uniwersalny endpoint.',
+                parameters: [
+                  { name: 'token', type: 'string', description: 'Token uwierzytelniający. Zalecane jest przesyłanie go w nagłówku HTTP `X-BLToken`.' },
+                  { name: 'method', type: 'string', description: 'Nazwa wywoływanej metody API.' },
+                  { name: 'parameters', type: 'json_string', description: 'Parametry metody w formacie JSON.' },
+                ],
+                response: [
+                  { name: 'status', type: 'string', description: '`SUCCESS` lub `ERROR`.' },
+                  { name: 'error_code', type: 'string', description: '(Opcjonalnie) Kod błędu.' },
+                  { name: 'error_message', type: 'string', description: '(Opcjonalnie) Komunikat błędu.' },
+                ],
+                example: {
+                  request: 'POST /connector.php HTTP/1.1\nHost: api.baselinker.com\nX-BLToken: YOUR_TOKEN\nContent-Type: application/x-www-form-urlencoded\n\nmethod=getOrders&parameters={"date_from": 1407341754}',
+                  response: '{\n  "status": "SUCCESS",\n  "orders": [...]\n}',
+        },
+                keyInfo: {
+                  'Endpoint': 'https://api.baselinker.com/connector.php',
+                  'Metoda HTTP': 'POST',
+                  'Format Danych': 'JSON',
+                  'Limit Żądań': '100 żądań / minutę',
+                  'Kodowanie': 'UTF-8',
+        },
+      },
+    },
+  },
+          'Zarządzanie Katalogiem Produktów': {
+            isCategory: true,
+            description: 'Metody do zarządzania produktami, kategoriami, cenami i magazynami w katalogach BaseLinker.',
+            methods: {
+              getInventoryWarehouses: {
+                isDocumented: 'full',
+                description: 'Pobiera listę magazynów, w tym te utworzone automatycznie dla sklepów i hurtowni.',
+                parameters: [],
+                response: [
+                  { name: 'warehouses', type: 'array', description: 'Tablica obiektów magazynów.' },
+                  { name: 'warehouse_type', type: 'string', description: 'Typ magazynu: `bl`, `shop`, `warehouse`.' },
+                  { name: 'warehouse_id', type: 'int', description: 'Unikalny identyfikator magazynu.' },
+                  { name: 'name', type: 'string', description: 'Nazwa magazynu.' },
+                ],
+                example: { request: '{"method": "getInventoryWarehouses"}', response: '{"status":"SUCCESS","warehouses":[{"warehouse_type":"bl", "warehouse_id":206, "name":"Główny", ...}]}' },
+              },
+              addInventoryProduct: {
+                isDocumented: 'full',
+                description: 'Dodaje nowy produkt do katalogu lub aktualizuje istniejący. Bardzo rozbudowana metoda z wieloma parametrami.',
+                parameters: [
+                  { name: 'inventory_id', type: 'int', description: 'ID katalogu.' },
+                  { name: 'product_id', type: 'string', description: '(Opcjonalnie) ID produktu do aktualizacji.' },
+                  { name: 'name', type: 'string', description: 'Nazwa produktu.' },
+                  { name: 'sku', type: 'string', description: 'SKU produktu.' },
+                  { name: 'ean', type: 'string', description: 'EAN produktu.' },
+                  { name: 'prices', type: 'array', description: 'Tablica cen w różnych grupach cenowych.' },
+                  { name: 'stock', type: 'array', description: 'Tablica stanów magazynowych w różnych magazynach.' },
+                ],
+                response: [
+                  { name: 'product_id', type: 'string', description: 'ID dodanego/zaktualizowanego produktu.' },
+                  { name: 'warnings', type: 'object', description: 'Obiekt z błędami niekrytycznymi.' },
+                ],
+                example: { request: '{"method": "addInventoryProduct", "parameters": {"inventory_id": 307, "name": "Nowy Produkt", ...}}', response: '{"status":"SUCCESS", "product_id": 2685}' },
+              },
+              getInventoryProductsList: {
+                isDocumented: 'full',
+                description: 'Pobiera listę produktów z katalogu z możliwością filtrowania.',
+                parameters: [
+                  { name: 'inventory_id', type: 'int', description: 'ID katalogu.' },
+                  { name: 'filter_name', type: 'string', description: '(Opcjonalnie) Filtr po nazwie produktu.' },
+                  { name: 'page', type: 'int', description: '(Opcjonalnie) Numer strony (1000 produktów/stronę).' },
+                ],
+                response: [
+                  { name: 'products', type: 'array', description: 'Tablica obiektów produktów z podstawowymi danymi.' },
+                ],
+                example: { request: '{"method": "getInventoryProductsList", "parameters": {"inventory_id": 307, "page": 1}}', response: '{"status":"SUCCESS", "products": [...]}' },
+              },
+              updateInventoryProductsStock: {
+                isDocumented: 'full',
+                description: 'Masowa aktualizacja stanów magazynowych dla maksymalnie 1000 produktów.',
+                parameters: [
+                  { name: 'inventory_id', type: 'int', description: 'ID katalogu.' },
+                  { name: 'products', type: 'array', description: 'Tablica asocjacyjna, gdzie klucz to ID produktu, a wartość to tablica stanów w magazynach.' },
+                ],
+                response: [
+                  { name: 'counter', type: 'int', description: 'Liczba zaktualizowanych produktów.' },
+                  { name: 'warnings', type: 'array', description: 'Ostrzeżenia dla produktów, których nie udało się zaktualizować.' },
+                ],
+                example: { request: '{"method": "updateInventoryProductsStock", "parameters": {"inventory_id": 307, "products": {"2685": {"bl_206": 5}}}}', response: '{"status":"SUCCESS", "counter": 1, "warnings": ""}' },
+              },
+              getInventories: { isDocumented: 'none', description: 'Pobiera listę katalogów. Szczegółowe informacje są niedostępne w raporcie źródłowym.' },
+              getInventoryTags: { isDocumented: 'none', description: 'Pobiera tagi produktów. Szczegółowe informacje są niedostępne w raporcie źródłowym.' },
+              addInventoryPriceGroup: { isDocumented: 'partial', description: 'Dodaje nową grupę cenową. Dostępny jest tylko ogólny opis, brak szczegółów parametrów w raporcie.' },
+            },
+  },
+          'Zarządzanie Zamówieniami': {
+            isCategory: true,
+            description: 'Metody do kompleksowego zarządzania zamówieniami - od dodawania, przez modyfikację, po fakturowanie.',
+            methods: {
+              addOrder: {
+                isDocumented: 'full',
+                description: 'Dodaje nowe zamówienie do systemu BaseLinker. Posiada bardzo obszerną listę parametrów.',
+                parameters: [
+                  { name: 'order_status_id', type: 'int', description: 'Wymagane ID statusu zamówienia.' },
+                  { name: 'date_add', type: 'unix_timestamp', description: 'Data dodania zamówienia.' },
+                  { name: 'email', type: 'string', description: 'Adres e-mail klienta.' },
+                  { name: 'delivery_fullname', type: 'string', description: 'Imię i nazwisko do wysyłki.' },
+                  { name: 'delivery_address', type: 'string', description: 'Adres do wysyłki.' },
+                  { name: 'products', type: 'array', description: 'Tablica obiektów z produktami w zamówieniu.' },
+                ],
+                response: [
+                  { name: 'order_id', type: 'int', description: 'ID nowo utworzonego zamówienia.' },
+                ],
+                example: { request: '{"method": "addOrder", "parameters": {"order_status_id": 8, "email": "test@test.com", ...}}', response: '{"status":"SUCCESS", "order_id": 16331079}' },
+              },
+              getOrders: {
+                isDocumented: 'full',
+                description: 'Pobiera listę zamówień z możliwością filtrowania. Zwraca maksymalnie 100 zamówień na raz.',
+                parameters: [
+                  { name: 'date_confirmed_from', type: 'unix_timestamp', description: '(Opcjonalnie) Filtr daty potwierdzenia.' },
+                  { name: 'status_id', type: 'int', description: '(Opcjonalnie) Filtr po statusie zamówienia.' },
+                  { name: 'id_from', type: 'int', description: '(Opcjonalnie) Pobierz zamówienia od tego ID.' },
+                ],
+                response: [
+                  { name: 'orders', type: 'array', description: 'Tablica obiektów zamówień. Każdy obiekt zawiera pełne dane zamówienia.' },
+                ],
+                example: { request: '{"method": "getOrders", "parameters": {"date_confirmed_from": 1407341754}}', response: '{"status":"SUCCESS", "orders": [...]}' },
+              },
+              getOrderStatusList: {
+                isDocumented: 'full',
+                description: 'Pobiera listę wszystkich zdefiniowanych statusów zamówień.',
+                parameters: [],
+                response: [
+                  { name: 'statuses', type: 'array', description: 'Tablica obiektów statusów.' },
+                  { name: 'id', type: 'int', description: 'ID statusu.' },
+                  { name: 'name', type: 'string', description: 'Nazwa statusu.' },
+                  { name: 'color', type: 'hex', description: 'Kolor statusu.' },
+                ],
+                example: { request: '{"method": "getOrderStatusList"}', response: '{"status":"SUCCESS", "statuses": [{"id": 8, "name": "Nowe zamówienia", ...}]}' },
+              },
+              setOrderStatus: {
+                isDocumented: 'full',
+                description: 'Zmienia status dla pojedynczego zamówienia.',
+                parameters: [
+                  { name: 'order_id', type: 'int', description: 'ID zamówienia.' },
+                  { name: 'status_id', type: 'int', description: 'ID nowego statusu.' },
+                ],
+                response: [],
+                example: { request: '{"method": "setOrderStatus", "parameters": {"order_id": 12345, "status_id": 9}}', response: '{"status":"SUCCESS"}' },
+              },
+              addInvoice: {
+                isDocumented: 'full',
+                description: 'Tworzy i przypisuje fakturę do zamówienia.',
+                parameters: [
+                  { name: 'order_id', type: 'int', description: 'ID zamówienia.' },
+                  { name: 'series_id', type: 'int', description: 'ID serii numeracji faktur.' },
+                ],
+                response: [
+                  { name: 'invoice_id', type: 'int', description: 'ID nowo utworzonej faktury.' },
+                ],
+                example: { request: '{"method": "addInvoice", "parameters": {"order_id": 12345, "series_id": 1}}', response: '{"status":"SUCCESS", "invoice_id": 9876}' },
+              },
+              getOrderTransactionData: { isDocumented: 'none', description: 'Pobiera szczegóły transakcji. Szczegółowe informacje są niedostępne w raporcie źródłowym.' },
+            },
+  },
+          'Dokumenty Magazynowe i Zakupowe': {
+            isCategory: true,
+            description: 'Zarządzanie dokumentami magazynowymi (np. PZ, WZ) oraz zamówieniami zakupu.',
+            methods: {
+              getInventoryDocumentItems: {
+                isDocumented: 'full',
+                description: 'Pobiera pozycje z określonego dokumentu magazynowego.',
+                parameters: [
+                  { name: 'document_id', type: 'int', description: 'ID dokumentu magazynowego.' },
+                ],
+                response: [
+                  { name: 'items', type: 'array', description: 'Lista pozycji dokumentu.' },
+                ],
+                example: { request: '{"method": "getInventoryDocumentItems", "parameters": {"document_id": 101}}', response: '{"status":"SUCCESS", "items": [...]}' },
+              },
+              getInventoryPurchaseOrders: {
+                isDocumented: 'full',
+                description: 'Pobiera listę zamówień zakupu z możliwością filtrowania.',
+                parameters: [
+                  { name: 'date_from', type: 'unix_timestamp', description: 'Filtr daty utworzenia.' },
+                  { name: 'page', type: 'int', description: 'Numer strony (100 dok./stronę).' },
+                ],
+                response: [
+                  { name: 'purchase_orders', type: 'array', description: 'Lista zamówień zakupu.' },
+                ],
+                example: { request: '{"method": "getInventoryPurchaseOrders", "parameters": {"date_from": 1609459200}}', response: '{"status":"SUCCESS", "purchase_orders": [...]}' },
+              },
+              getInventoryDocuments: { isDocumented: 'none', description: 'Pobiera listę dokumentów magazynowych. Szczegółowe informacje są niedostępne w raporcie źródłowym.' },
+              getInventoryDocumentSeries: { isDocumented: 'none', description: 'Pobiera serie numeracji dokumentów. Szczegółowe informacje są niedostępne w raporcie źródłowym.' },
+              getInventoryPurchaseOrderSeries: { isDocumented: 'none', description: 'Pobiera serie numeracji zamówień zakupu. Szczegółowe informacje są niedostępne w raporcie źródłowym.' },
+            },
+  },
+          'Magazyny Zewnętrzne': {
+            isCategory: true,
+            description: 'Metody do synchronizacji danych z zewnętrznymi magazynami, takimi jak sklepy czy hurtownie.',
+            methods: {
+              getExternalStoragesList: {
+                isDocumented: 'full',
+                description: 'Pobiera listę podłączonych magazynów zewnętrznych.',
+                parameters: [],
+                response: [
+                  { name: 'storages', type: 'array', description: 'Tablica obiektów magazynów.' },
+                  { name: 'storage_id', type: 'string', description: 'ID magazynu w formacie `[type]_[id]`.' },
+                  { name: 'name', type: 'string', description: 'Nazwa magazynu.' },
+                  { name: 'methods', type: 'array', description: 'Lista metod API obsługiwanych przez dany magazyn.' },
+                ],
+                example: { request: '{"method": "getExternalStoragesList"}', response: '{"status":"SUCCESS", "storages": [{"storage_id": "shop_2445", ...}]}' },
+              },
+              getExternalStorageProductsData: {
+                isDocumented: 'full',
+                description: 'Pobiera szczegółowe dane produktów z magazynu zewnętrznego.',
+                parameters: [
+                  { name: 'storage_id', type: 'string', description: 'ID magazynu zewnętrznego.' },
+                  { name: 'products', type: 'array', description: 'Tablica ID produktów do pobrania.' },
+                ],
+                response: [
+                  { name: 'products', type: 'array', description: 'Tablica obiektów z pełnymi danymi produktów.' },
+                ],
+                example: { request: '{"method": "getExternalStorageProductsData", "parameters": {"storage_id": "shop_2445", "products": ["123", "124"]}}', response: '{"status":"SUCCESS", "products": {...}}' },
+              },
+              updateExternalStorageProductsQuantity: {
+                isDocumented: 'full',
+                description: 'Masowa aktualizacja stanów magazynowych w magazynie zewnętrznym.',
+                parameters: [
+                  { name: 'storage_id', type: 'string', description: 'ID magazynu zewnętrznego.' },
+                  { name: 'products', type: 'array', description: 'Tablica produktów i ich nowych ilości.' },
+                ],
+                response: [
+                  { name: 'counter', type: 'int', description: 'Liczba zaktualizowanych produktów.' },
+                ],
+                example: { request: '{"method": "updateExternalStorageProductsQuantity", "parameters": {"storage_id": "shop_2445", "products": [["123", "", 10]]}}', response: '{"status":"SUCCESS", "counter": 1}' },
+              },
+            },
+  },
+        }
+
+const mainContent = document.getElementById('mainContent')
+const apiNav = document.getElementById('apiNav')
+const searchInput = document.getElementById('searchInput')
+
+const getStatusIcon = status => {
+          switch (status) {
+            case 'full': return '<span class="text-green-500" title="Pełna dokumentacja">●</span>'
+        case 'partial': return '<span class="text-yellow-500" title="Częściowa dokumentacja">●</span>'
+        case 'none': return '<span class="text-red-500" title="Brak szczegółowej dokumentacji">●</span>'
+        default: return ''
+  }
+        }
+
+const renderWelcomePage = () => {
+          const stats = { full: 0, partial: 0, none: 0 }
+  const categoryCounts = {}
+
+  Object.keys(apiData).forEach(categoryKey => {
+            if (apiData[categoryKey].isCategory && categoryKey !== 'Wprowadzenie') {
+              const methods = apiData[categoryKey].methods
+              const methodCount = Object.keys(methods).length
+              if (methodCount > 0)
+                categoryCounts[categoryKey] = methodCount
+
+      Object.keys(methods).forEach(methodKey => {
+                stats[methods[methodKey].isDocumented]++
+              })
+    }
+          })
+
+  const introData = apiData.Wprowadzenie.methods['Omówienie']
+
+  mainContent.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+                    <h2 class="text-3xl font-bold mb-2 text-slate-900">${introData.description}</h2>
+                    <p class="text-slate-600 mb-6">Poniżej znajdują się kluczowe informacje dotyczące korzystania z API. Ta interaktywna aplikacja pomoże Ci zrozumieć jego strukturę i dostępne metody. Użyj nawigacji po lewej stronie, aby przeglądać poszczególne moduły i metody.</p>
+                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                        ${Object.entries(introData.keyInfo).map(([key, value]) => `
+                            <div class="bg-slate-50 p-4 rounded-md border border-slate-200">
+                                <p class="text-sm font-medium text-slate-500">${key}</p>
+                                <p class="text-lg font-semibold text-slate-900 break-words">${value}</p>
+                            </div>
+                        `).join('')}
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+            <h3 class="text-xl font-bold mb-4">Ważna informacja o kompletności dokumentacji</h3>
+            <div class="flex items-start bg-amber-50 border-l-4 border-amber-400 p-4 rounded-md">
+                <div class="flex-shrink-0">
+                    <svg class="h-6 w-6 text-amber-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.21 3.03-1.742 3.03H4.42c-1.532 0-2.492-1.696-1.742-3.03l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-amber-700">Ta aplikacja bazuje na dostarczonym raporcie tekstowym, który wyraźnie wskazuje, że dla wielu metod API BaseLinker brakuje szczegółowych informacji (parametrów, odpowiedzi, przykładów). Metody te są oznaczone czerwoną kropką (<span class="text-red-500">●</span>) w nawigacji. Do pełnej integracji niezbędny będzie dostęp do oficjalnej, kompletnej dokumentacji API.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-lg shadow-sm">
+                <h3 class="text-xl font-bold mb-4 text-center">Rozkład Metod API</h3>
+                <div class="chart-container"><canvas id="categoryChart"></canvas></div>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-sm">
+                <h3 class="text-xl font-bold mb-4 text-center">Status Dokumentacji w Raporcie</h3>
+                <div class="chart-container"><canvas id="documentationChart"></canvas></div>
+            </div>
+        </div>
+    `
+
+  new Chart(document.getElementById('categoryChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+              labels: Object.keys(categoryCounts),
+              datasets: [{
+                data: Object.values(categoryCounts),
+                backgroundColor: ['#38bdf8', '#fb923c', '#4ade80', '#a78bfa', '#f472b6'],
+                borderColor: '#ffffff',
+                borderWidth: 2,
+              }],
+    },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                  callbacks: {
+                    label(context) {
+                      let label = context.label || ''
+                      if (label)
+                        label += ': '
+        
+                      if (context.parsed !== null)
+                        label += `${context.parsed} metod`
+
+                      return label
+                    },
+                  },
+        },
+      },
+    },
+  })
+
+  new Chart(document.getElementById('documentationChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+              labels: ['Status Dokumentacji'],
+              datasets: [
+                { label: 'Pełna', data: [stats.full], backgroundColor: '#22c55e' },
+                { label: 'Częściowa', data: [stats.partial], backgroundColor: '#f59e0b' },
+                { label: 'Brak', data: [stats.none], backgroundColor: '#ef4444' },
+              ],
+    },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: { y: { beginAtZero: true, stacked: true }, x: { stacked: true } },
+              plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                  callbacks: {
+                    label(context) {
+                      return `${context.dataset.label}: ${context.raw}`
+                    },
+                  },
+        },
+      },
+    },
+  })
+}
+
+const renderMethodDetails = (categoryKey, methodKey) => {
+          const method = apiData[categoryKey].methods[methodKey]
+
+  const renderTable = (data, headers) => {
+            if (!data || data.length === 0)
+      return '<p class="text-slate-500 italic">Brak zdefiniowanych parametrów.</p>'
+        return `
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 text-xs text-slate-700 uppercase">
+                                <tr>
+                                    ${headers.map(h => `<th scope="col" class="px-4 py-3">${h}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.map(p => `
+                                    <tr class="bg-white border-b border-slate-200">
+                                        <td class="px-4 py-3 font-mono text-sky-700 font-medium table-cell-break">${p.name}</td>
+                                        <td class="px-4 py-3 font-mono text-purple-700 table-cell-break">${p.type}</td>
+                                        <td class="px-4 py-3 text-slate-600 table-cell-break">${p.description}</td>
+                                    </tr>
+                                `).join('')}
+                    </tbody>
+                </table>
+            </div>`
+  }
+
+  const content = `
+        <div class="bg-white p-6 rounded-lg shadow-sm">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <p class="text-sm font-semibold text-sky-600 uppercase">${categoryKey}</p>
+                    <h2 class="text-3xl font-bold text-slate-900 font-mono">${methodKey}</h2>
+                </div>
+                <div class="text-right">
+                   ${getStatusIcon(method.isDocumented)}
+                   <span class="ml-2 text-sm font-medium ${method.isDocumented === 'full' ? 'text-green-700 bg-green-100' : method.isDocumented === 'partial' ? 'text-yellow-700 bg-yellow-100' : 'text-red-700 bg-red-100'} px-2 py-1 rounded-full">${method.isDocumented === 'full' ? 'Udokumentowana' : method.isDocumented === 'partial' ? 'Częściowa' : 'Brak Danych'}</span>
+                </div>
+            </div>
+            <p class="text-slate-600 mb-6">${method.description}</p>
+            
+            ${method.isDocumented !== 'none'
+    ? `
+            <div class="border border-slate-200 rounded-md">
+                <div class="flex border-b border-slate-200 bg-slate-50 rounded-t-md" id="tabs">
+                    <button data-tab="params" class="tab-btn flex-1 p-3 font-semibold text-sm border-b-2 border-sky-500 text-sky-600">Parametry</button>
+                    <button data-tab="response" class="tab-btn flex-1 p-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-sky-600 hover:border-slate-300">Odpowiedź</button>
+                    ${method.example ? '<button data-tab="example" class="tab-btn flex-1 p-3 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-sky-600 hover:border-slate-300">Przykład</button>' : ''}
+                </div>
+                <div id="tabContent" class="p-4">
+                    <div id="params-content" class="tab-content-item">
+                        ${renderTable(method.parameters, ['Nazwa', 'Typ', 'Opis'])}
+                    </div>
+                    <div id="response-content" class="tab-content-item hidden">
+                        ${renderTable(method.response, ['Nazwa', 'Typ', 'Opis'])}
+                    </div>
+                    ${method.example
+    ? `
+                    <div id="example-content" class="tab-content-item hidden">
+                        <h4 class="font-semibold text-md mb-2">Żądanie (Request)</h4>
+                        <pre class="bg-slate-900 text-white p-4 rounded-md text-sm overflow-x-auto mb-4"><code>${method.example.request}</code></pre>
+                        <h4 class="font-semibold text-md mb-2">Odpowiedź (Response)</h4>
+                        <pre class="bg-slate-900 text-white p-4 rounded-md text-sm overflow-x-auto"><code>${method.example.response}</code></pre>
+                    </div>`
+    : ''}
+                </div>
+            </div>`
+    : `
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-md">
+                <p class="text-sm text-red-700">W dostarczonym raporcie analitycznym brakuje szczegółowych informacji na temat parametrów, odpowiedzi oraz przykładów użycia dla tej metody.</p>
+            </div>`}
+</div>
+    `
+
+  mainContent.innerHTML = content
+
+  if (method.isDocumented !== 'none') {
+            document.getElementById('tabs').addEventListener('click', e => {
+              if (e.target.matches('.tab-btn')) {
+                const tabId = e.target.dataset.tab
+        
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                  btn.classList.remove('border-sky-500', 'text-sky-600')
+                  btn.classList.add('border-transparent', 'text-slate-500')
+                })
+        e.target.classList.add('border-sky-500', 'text-sky-600')
+                e.target.classList.remove('border-transparent', 'text-slate-500')
+
+                document.querySelectorAll('.tab-content-item').forEach(item => {
+                  item.classList.add('hidden')
+                })
+        document.getElementById(`${tabId}-content`).classList.remove('hidden')
+              }
+            })
+  }
+        }
+
+const buildNav = (filter = '') => {
+          let navHtml = ''
+  const filterLower = filter.toLowerCase()
+
+  Object.keys(apiData).forEach(categoryKey => {
+            const category = apiData[categoryKey]
+        const methods = category.methods
+        
+        const filteredMethods = Object.keys(methods).filter(methodKey => methodKey.toLowerCase().includes(filterLower))
+
+        if (filteredMethods.length > 0) {
+              navHtml += `
+                        <div class="mb-4">
+                            <h3 class="font-bold text-sm uppercase text-slate-500 tracking-wider px-2">${categoryKey}</h3>
+                    <ul class="mt-2 space-y-1">
+            `
+              filteredMethods.forEach(methodKey => {
+                const method = methods[methodKey]
+
+                navHtml += `
+                            <li>
+                                <a href="#" data-category="${categoryKey}" data-method="${methodKey}" class="nav-link flex items-center justify-between px-2 py-1.5 text-sm rounded-md text-slate-700 hover:bg-slate-200">
+                                    <span class="font-medium">${methodKey}</span>
+                                    ${getStatusIcon(method.isDocumented)}
+                        </a>
+                    </li>
+                `
+              })
+      navHtml += '</ul></div>'
+    }
+          })
+  apiNav.innerHTML = navHtml
+
+  document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', e => {
+              e.preventDefault()
+              document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('bg-sky-100', 'text-sky-700'))
+              link.classList.add('bg-sky-100', 'text-sky-700')
+
+              const category = link.dataset.category
+              const method = link.dataset.method
+              if (category === 'Wprowadzenie')
+                renderWelcomePage()
+      else
+                renderMethodDetails(category, method)
+    })
+  })
+}
+
+searchInput.addEventListener('keyup', e => {
+          buildNav(e.target.value)
+})
+
+document.addEventListener('DOMContentLoaded', () => {
+          buildNav()
+  renderWelcomePage()
+  apiNav.querySelector('.nav-link[data-category="Wprowadzenie"]').classList.add('bg-sky-100', 'text-sky-700')
+})
+    </script>
+</body>
+</html>

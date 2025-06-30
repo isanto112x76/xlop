@@ -1,0 +1,176 @@
+Na podstawie analizy dostarczonego repozytorium, aby uzyskać w pełni działający system magazynowy, należy wdrożyć następujące kroki i funkcjonalności:
+
+I. Uzupełnienie istniejących modułów i poprawki:
+
+Logika biznesowa w Kontrolerach i Serwisach:
+
+CategoryController: Dokończyć logikę sprawdzającą, czy kategoria nie jest używana (produkty) lub czy nie ma podkategorii, które trzeba by przenieść/usunąć przed usunięciem kategorii.
+ManufacturerController: Dodać logikę sprawdzającą, czy producent nie jest przypisany do żadnych produktów przed jego usunięciem.
+ProductController:
+Dokończyć implementację filtrów sprzedaży (sales_total_from, sales_total_to).
+Rozbudować logikę aktualizacji wariantów, stanów magazynowych itp. w metodzie update.
+TaxRateController: Dodać logikę sprawdzającą, czy stawka VAT nie jest przypisana do produktów przed jej usunięciem.
+UserController: Dodać logikę sprawdzającą, czy użytkownik nie usuwa samego siebie lub czy ma odpowiednie uprawnienia.
+WarehouseController: Dodać logikę sprawdzającą, czy magazyn nie jest używany i czy nie jest domyślny, zanim zostanie usunięty.
+DocumentController:
+Implementacja bezpiecznego usuwania dokumentu, które cofa operacje magazynowe (np. poprzez metodę cancelDocument w DocumentService). Aktualnie jest tylko proste usuwanie.
+BaselinkerService:
+Dodać logikę mapowania SKU z zamówienia na ID wariantu produktu w lokalnej bazie danych podczas synchronizacji zamówień.
+Umożliwić przekazywanie opcjonalnych parametrów filtrowania do metody getAndStoreOrders.
+ProductService:
+Rozważyć dedykowane metody do dodawania/usuwania pojedynczych zdjęć produktu w updateProduct.
+Walidacja i Obsługa Błędów:
+
+StoreDocumentRequest: Upewnić się, że walidacja dla items_inventory oraz parent_document_id jest kompletna i poprawnie obsługuje różne typy dokumentów.
+UpdateProductRequest: Dodać walidację dla aktualizowanych SKU wariantów, aby były unikalne, ignorując bieżący wariant (Rule::unique('product_variants')->ignore($this->input('variants.*.id'))).
+Zapewnić spójną i szczegółową obsługę błędów API, w tym logowanie błędów i zwracanie odpowiednich kodów HTTP z komunikatami dla użytkownika.
+Interfejs Użytkownika (Frontend):
+
+Stworzyć brakujące widoki dla wszystkich ścieżek zdefiniowanych w resources/ts/navigation/vertical/index.ts (skrypt generate_vuexy_pages.py tworzy tylko placeholdery).
+Zaimplementować logikę wyświetlania, dodawania, edycji i usuwania dla wszystkich modułów (Produkty, Kategorie, Dokumenty, Zamówienia, Dostawcy, Kontrahenci, Użytkownicy, Magazyny, Koszty, Stawki VAT, Producenci).
+Dodać obsługę filtrowania i sortowania dla list w interfejsie użytkownika, zgodnie z możliwościami API (np. w ProductController).
+Zaimplementować formularze z walidacją po stronie klienta, odpowiadające regułom z FormRequestów (np. StoreProductRequest, StoreDocumentRequest).
+Umożliwić zarządzanie zdjęciami produktów (dodawanie, usuwanie, zmiana kolejności).
+Dodać interfejs do zarządzania zestawami produktów (bundle items).
+Stworzyć interfejs do zarządzania linkami do produktów.
+Dodać obsługę tagów dla produktów.
+Rozbudować interfejs użytkownika dla modułu Inwentaryzacji (tworzenie dokumentu INW, wprowadzanie policzonych ilości, wyświetlanie różnic).
+Zaimplementować interfejs do tworzenia i zarządzania dokumentami finansowymi (FS, FVZ) powiązanymi z dokumentami magazynowymi.
+II. Rozwój nowych funkcjonalności:
+
+Moduł Kontrahentów (Klienci):
+
+Stworzyć model Contractor (lub rozbudować User, jeśli klienci to użytkownicy systemu).
+Dodać migrację dla tabeli kontrahentów.
+Stworzyć ContractorController z obsługą CRUD.
+Stworzyć StoreContractorRequest i UpdateContractorRequest.
+Stworzyć ContractorResource.
+Dodać odpowiednie opcje do SelectOptionsController.
+Zaktualizować Document i Order model, aby poprawnie linkowały do kontrahentów (customer_id).
+Zaawansowane Zarządzanie Zestawami (Bundles):
+
+Rozbudować logikę w ProductService i DocumentService do obsługi automatycznego rozliczania składników zestawów przy operacjach magazynowych.
+Zapewnić, że stany magazynowe składników są poprawnie aktualizowane przy sprzedaży/wydaniu zestawu.
+Umożliwić "kompletację" zestawów (dokument PW na zestaw, RW na składniki).
+Obsługa Numerów Seryjnych / Partii:
+
+Jeśli system ma obsługiwać produkty z numerami seryjnymi lub partiami, wymaga to znacznej rozbudowy:
+Dodatkowe tabele w bazie danych do przechowywania numerów seryjnych/partii i ich powiązań z produktami oraz dokumentami.
+Modyfikacja logiki przyjęć, wydań, inwentaryzacji, aby uwzględniać numery seryjne/partie.
+Zmiany w interfejsie użytkownika do wprowadzania i śledzenia tych numerów.
+Mechanizmy Rezerwacji i Dostępności:
+
+Usprawnić logikę rezerwacji (reserved_quantity w StockLevel) i dostępności (available_quantity).
+Automatyczne tworzenie rezerwacji przy składaniu zamówienia (jeśli nie jest to już zaimplementowane w BaselinkerService lub powiązanej logice).
+Zwalnianie rezerwacji przy anulowaniu zamówienia lub po określonym czasie.
+Powiadomienia:
+
+Rozbudować system powiadomień (tabela notifications istnieje):
+Powiadomienia o niskich stanach magazynowych.
+Powiadomienia o nowych zamówieniach.
+Powiadomienia o zakończonych/nieudanych synchronizacjach.
+Zaimplementować wysyłkę powiadomień (e-mail, SMS - jeśli potrzebne, UI).
+Audyt i Historia Zmian:
+
+Rozbudować AuditTrail (model istnieje):
+Automatyczne logowanie zmian dla wszystkich kluczowych modeli (produkty, dokumenty, stany magazynowe, zamówienia itp.).
+Zapewnić szczegółowe logowanie "starych" i "nowych" wartości.
+Stworzyć interfejs do przeglądania historii zmian dla poszczególnych obiektów.
+Synchronizacja z Baselinker:
+
+Dokończyć implementację BaselinkerService:
+Dwukierunkowa synchronizacja produktów (dodawanie, aktualizacja).
+Synchronizacja kategorii.
+Obsługa różnych katalogów Baselinker (pole inventory_id w Product).
+Mapowanie magazynów lokalnych na magazyny Baselinker (baselinker_storage_id w Warehouse).
+Rozbudować SynchronizationLog (model istnieje) i interfejs do przeglądania logów synchronizacji.
+Rozważyć kolejkowanie zadań synchronizacji dla większej wydajności.
+Obsługa Wielu Magazynów:
+
+Upewnić się, że wszystkie operacje magazynowe (PZ, WZ, MM, INW itp.) poprawnie obsługują pracę na wielu magazynach.
+Umożliwić użytkownikowi wybór magazynu docelowego/źródłowego w interfejsie.
+Uprawnienia i Role Użytkowników (CASL):
+
+Dokładnie zdefiniować role i uprawnienia dla poszczególnych akcji w systemie.
+Zintegrować vite-plugin-vue-meta-layouts z logiką CASL, aby kontrolować dostęp do poszczególnych widoków/komponentów.
+Rozbudować AuthController i logikę ability w resources/ts/plugins/ability.ts o bardziej granularne uprawnienia.
+Testy:
+
+Napisać testy jednostkowe i funkcjonalne dla logiki backendowej (kontrolery, serwisy, modele).
+Rozważyć testy E2E dla kluczowych przepływów użytkownika.
+Optymalizacja i Wydajność:
+
+Przejrzeć zapytania do bazy danych pod kątem optymalizacji (np. użycie eager loading tam, gdzie to konieczne).
+Dla długotrwałych operacji (np. import/eksport, synchronizacje) zaimplementować zadania w tle (kolejki Laravel).
+Dokumentacja:
+
+Stworzyć dokumentację użytkownika i administratora.
+Uzupełnić dokumentację kodu (PHPDoc, komentarze).
+Kolejność wdrażania (propozycja):
+
+Backend - Rdzeń:
+Dokończenie logiki CRUD i walidacji dla istniejących modułów (Produkty, Kategorie, Dokumenty, Magazyny, Dostawcy itp.).
+Implementacja pełnej logiki DocumentService dla wszystkich typów dokumentów i operacji na stanach magazynowych (w tym obsługa rezerwacji).
+Usprawnienie ProductService do zarządzania wariantami i podstawowymi zdjęciami.
+Frontend - Rdzeń:
+Stworzenie podstawowych widoków list i formularzy dla głównych modułów (Produkty, Dokumenty, Stany magazynowe).
+Implementacja podstawowych operacji CRUD w interfejsie.
+Synchronizacja z Baselinker (Podstawowa):
+Pobieranie zamówień i aktualizacja stanów magazynowych (najważniejsze funkcje).
+Logowanie synchronizacji.
+Uwierzytelnianie i Autoryzacja:
+Rozbudowa ról i uprawnień (CASL).
+Zabezpieczenie endpointów API i widoków frontendowych.
+Moduły Dodatkowe:
+Pełna implementacja modułu Kontrahentów.
+Rozbudowa zarządzania Zestawami.
+Implementacja modułu Kosztów.
+Funkcjonalności Zaawansowane:
+Zaawansowane raporty i analizy.
+Pełna obsługa Inwentaryzacji w UI.
+Rozbudowa powiadomień.
+Implementacja AuditTrail.
+Integracje (Rozszerzenie):
+Dwukierunkowa synchronizacja produktów z Baselinker.
+Integracja z Allegro (jeśli wymagane).
+Optymalizacja i Testy:
+Testy jednostkowe i funkcjonalne.
+Optymalizacja zapytań i wydajności.
+Finalizacja:
+Uzupełnienie dokumentacji.
+Testy E2E.
+Poprawki i udoskonalenia na podstawie testów.
+Powyższa lista jest obszerna i kolejność może być dostosowana w zależności od priorytetów biznesowych projektu. Kluczowe jest iteracyjne podejście i testowanie każdej wdrożonej funkcjonalności.
+
+
+
+
+
+
+
+
+
+
+
+*Podstawowe informacje
+
+edycja produktu
+-Nazwa przedmiotu
+-Nr. na kasie fiskalnej
+-Podstawowe dane
+ id (nieedytowalne)
+ -sku, ean, Numer obcy
+ -waga
+-kod magazynowy QR CODE SKU
+-kategoria
+-producent
+-dostawca
+
+
+*Warianty
+*Dostawcy
+-informacje o dostawcach tego produktu
+
+ *Dane marketplace
+ (edycja danych market place)
+

@@ -1,0 +1,80 @@
+mój program magazynowy działa w taki sposób że:
+każdy produkt ma przynajmniej jeden variant który musi być is_default = true
+reszta wariantów produktu ma is_default = false
+
+
+
+jeżeli product ma `manage_stock` = false wtedy 
+-wszystkie varianty przyjmują stock_level z głównego variantu (tan sam produkt, varianty jako kilka opisów)
+
+
+
+jeżeli product ma `manage_stock` = true wtedy 
+-każdy variant ma swój osobny stock_level (różne produkty z grupy jednego produktu, np. cola 1l, cola 2l iitp)
+
+
+
+Potwierdź że obecna moja logika w projekcie ten sposób obsługuje to co napisałem wyżej.
+
+
+
+
+
+
+Przeanalizuj dokładnie mój projekt – dostarczam cały kod oraz strukturę katalogów. Pracuję nad aplikacją z backendem w PHP (Laravel), frontendem w Vue 3 (TypeScript) i bazą danych (MySQL lub inny relacyjny silnik).
+
+Twoim zadaniem jest:
+
+
+
+Backend i Baza Danych
+
+Przejrzyj wszystkie migracje w katalogu database/migrations – przeanalizuj je w kolejności od najstarszej do najnowszej.
+
+Zanotuj wszystkie tabele, kolumny, ich typy, ograniczenia (klucze, unikalność, relacje itd.).
+
+Zwróć uwagę, które kolumny były dodawane, usuwane, zmieniane w trakcie rozwoju projektu (analiza historii migracji, nie tylko stanu końcowego).
+
+Sprawdź, czy są jakieś relacje pomiędzy tabelami (klucze obce), oraz czy tabele mają nietypowe/nietrywialne kolumny (np. JSON, enum).
+
+API i Backend
+
+Przejrzyj kod backendu (głównie katalogi routes/, app/Http/Controllers/, app/Models/).
+
+Zidentyfikuj wszystkie endpointy API (metody, ścieżki, wymagane parametry, typy zwracanych danych, autoryzacja).
+
+Przeanalizuj, jakie operacje wykonuje backend na bazie danych – co zapisuje, pobiera, jakie są walidacje i logika biznesowa.
+
+Sprawdź powiązania modeli z migracjami i nazwami kolumn w bazie.
+
+Frontend (resources/ts)
+
+Przejrzyj cały katalog resources/ts – przeanalizuj wszystkie pliki, komponenty, funkcje, zmienne, importy, typy.
+
+Zanotuj, jak frontend korzysta z endpointów API – gdzie wywoływane są zapytania HTTP, jak wyglądają przykładowe requesty i odpowiedzi, gdzie znajdują się adresy endpointów w kodzie.
+
+W szczególności skup się na pliku:
+
+resources/ts/pages/documents/add/[[id]].vue
+
+Przeanalizuj, jakie zmienne są tam wykorzystywane, jakie dane są pobierane i wysyłane do backendu, jakie są powiązania z innymi komponentami lub plikami.
+
+Zwróć uwagę na logikę działania tej strony (czy jest to dodawanie/edycja dokumentu, jakie są pola formularza, jakie walidacje).
+
+Ogólna Analiza
+
+Zwróć szczególną uwagę na nazewnictwo zmiennych, konwencje kodowania, powiązania między backendem a frontendem.
+
+Wypisz możliwe niezgodności lub rzeczy, które mogą sprawiać trudność przy rozbudowie systemu.
+
+Podaj ogólne wskazówki jak efektywnie rozwijać projekt na podstawie obecnej architektury (np. jak rozszerzać modele, jak dopisywać nowe endpointy zgodnie z aktualnym stylem).
+
+Raport końcowy
+
+Na końcu napisz podsumowanie: opisz jak działa aplikacja, jak wygląda przepływ danych (od bazy, przez backend do frontendu), jakie są kluczowe tabele i endpointy, jak najlepiej korzystać z obecnej struktury podczas dalszej rozbudowy backendu.
+
+Jeśli to możliwe, wskaż konkretne fragmenty kodu lub pliki, które są kluczowe do dalszej pracy nad projektem.
+
+Nie pomijaj żadnego z powyższych punktów. Odpowiedzi mają być jak najbardziej szczegółowe, z przykładami i cytatami z kodu.
+
+Jeśli czegoś brakuje w kodzie lub jest niejasne, zaznacz to w raporcie i napisz co należy poprawić/doprecyzować.
